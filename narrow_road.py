@@ -1,29 +1,31 @@
 #!/usr/bin/env python3
 """
-THE NARROW ROAD
-A narrative-driven fantasy adventure RPG
-with virtue tracking, lasting consequences, and space for reflection.
+THE NARROW ROAD — Minecraft-style Sandbox Prototype
+Keeps original virtue, loyalty, flag, and consequence systems.
+Play loop: explore → gather/build → face moral events → shape the world.
 """
 
 import random
 import sys
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 # ─────────────────────────────────────────────
-# CORE DATA
+# CORE SYSTEMS (unchanged from original)
 # ─────────────────────────────────────────────
 
 VIRTUES = ["Courage", "Wisdom", "Compassion", "Humility", "Temperance", "Justice"]
 
 class GameState:
     def __init__(self):
-        self.virtues: Dict[str, int] = {v: 5 for v in VIRTUES}  # start balanced
-        self.companions: Dict[str, int] = {  # loyalty 0–10
+        self.virtues: Dict[str, int] = {v: 5 for v in VIRTUES}
+        self.companions: Dict[str, int] = {
             "Elara": 6,   # healer / mercy
             "Kael": 5,    # warrior / justice
             "Silas": 4,   # scholar / wisdom
         }
-        self.inventory: List[str] = ["Traveler's Cloak", "Simple Staff"]
+        self.inventory: Dict[str, int] = {
+            "Wood": 0, "Stone": 0, "Food": 3, "Iron": 0, "Sacred Seed": 0
+        }
         self.flags: Dict[str, bool] = {
             "spared_bandit": False,
             "took_gold": False,
@@ -33,14 +35,25 @@ class GameState:
             "showed_mercy_to_enemy": False,
             "chose_power": False,
             "chose_sacrifice": False,
+            "restored_grove": False,
+            "overharvested": False,
+            "built_sanctuary": False,
+            "fortress_only": False,
         }
-        self.story_stage = "prologue"
+        self.world = {
+            "Whispering Woods": {"state": "healthy", "resources": ["Wood", "Food"]},
+            "Burning Village": {"state": "ruined", "resources": ["Stone", "Food"]},
+            "High Pass": {"state": "neutral", "resources": ["Stone", "Iron"]},
+            "Northern Citadel": {"state": "corrupted", "resources": []},
+        }
+        self.location = "Whispering Woods"
         self.player_name = "Traveler"
+        self.day = 1
         self.ending = None
+        self.story_stage = "explore"
 
     def change_virtue(self, name: str, amount: int, silent: bool = False):
         if name in self.virtues:
-            old = self.virtues[name]
             self.virtues[name] = max(0, min(10, self.virtues[name] + amount))
             if not silent and amount != 0:
                 direction = "grew" if amount > 0 else "wavered"
@@ -56,18 +69,21 @@ class GameState:
     def total_virtue(self) -> int:
         return sum(self.virtues.values())
 
-    def dominant_virtue(self) -> str:
-        return max(self.virtues, key=self.virtues.get)
+    def add_item(self, item: str, amount: int = 1):
+        self.inventory[item] = self.inventory.get(item, 0) + amount
+
+    def has_item(self, item: str, amount: int = 1) -> bool:
+        return self.inventory.get(item, 0) >= amount
 
 # ─────────────────────────────────────────────
-# UI HELPERS
+# UI
 # ─────────────────────────────────────────────
 
 def clear():
-    print("\n" + "─" * 60 + "\n")
+    print("\n" + "─" * 64)
 
 def pause():
-    input("\n[Press Enter to continue]")
+    input("\n[Enter]")
 
 def choice(prompt: str, options: List[str]) -> int:
     print(f"\n{prompt}")
@@ -75,224 +91,246 @@ def choice(prompt: str, options: List[str]) -> int:
         print(f"  {i}. {opt}")
     while True:
         try:
-            sel = int(input("\nYour choice: ").strip())
+            sel = int(input("\n> ").strip())
             if 1 <= sel <= len(options):
                 return sel
         except ValueError:
             pass
-        print("Please enter a valid number.")
+        print("Enter a valid number.")
 
 def show_status(state: GameState):
     clear()
-    print("═" * 60)
-    print(f"  {state.player_name}  |  Stage: {state.story_stage.title()}")
-    print("─" * 60)
+    print(f"  {state.player_name}  |  Day {state.day}  |  {state.location}")
+    print("─" * 64)
     print("  Virtues:")
     for v in VIRTUES:
         bar = "█" * state.virtues[v] + "░" * (10 - state.virtues[v])
         print(f"    {v:<12} [{bar}] {state.virtues[v]}")
-    print("─" * 60)
+    print("─" * 64)
     print("  Companions:")
     for name, loy in state.companions.items():
         hearts = "♥" * loy + "♡" * (10 - loy)
         print(f"    {name:<8} {hearts}")
-    if state.inventory:
-        print("─" * 60)
-        print("  Inventory:", ", ".join(state.inventory))
-    print("═" * 60)
+    print("─" * 64)
+    inv = [f"{k}:{v}" for k, v in state.inventory.items() if v > 0]
+    print("  Inventory:", ", ".join(inv) if inv else "empty")
+    print("─" * 64)
+    print("  World state:")
+    for place, data in state.world.items():
+        print(f"    {place}: {data['state']}")
+    print("═" * 64)
     pause()
 
 # ─────────────────────────────────────────────
-# STORY SCENES
+# WORLD ACTIONS (Minecraft-style loops)
 # ─────────────────────────────────────────────
 
-def prologue(state: GameState):
-    clear()
-    print("""
-You wake beside a dying fire on the edge of the Whispering Woods.
-The stars above are the same ones your grandmother once named for you—
-yet the world feels heavier than it did in her stories.
+def gather(state: GameState):
+    loc = state.world[state.location]
+    if not loc["resources"]:
+        print("\nNothing useful left to gather here.")
+        return
 
-A sealed letter lies in your pack. The wax bears the mark of the old Order:
-a simple lamp held against the dark.
+    print(f"\nYou search the {state.location}...")
+    resource = random.choice(loc["resources"])
 
-Inside, the words are few:
-
-    "The light is failing in the north.
-     The people forget what was given freely.
-     Come, if you still remember how to walk the narrow road."
-
-Three figures wait nearby—travelers who answered the same summons.
-""")
-    pause()
-
-    state.player_name = input("What name do you carry on this road? ").strip() or "Traveler"
-    print(f"\nVery well, {state.player_name}. The road opens.")
-    pause()
-
-    state.story_stage = "crossroads"
-    scene_crossroads(state)
-
-def scene_crossroads(state: GameState):
-    clear()
-    print("""
-The path forks at a weathered stone.
-
-To the east, smoke rises from a village. Cries carry on the wind.
-To the west, a merchant's caravan is under attack by bandits.
-The northern road climbs toward the mountains—and the summons that called you.
-""")
-    c = choice("Where do you turn first?", [
-        "East — toward the burning village",
-        "West — toward the embattled caravan",
-        "North — press on without delay"
-    ])
-
-    if c == 1:
-        state.flags["helped_village"] = True
-        scene_village(state)
-    elif c == 2:
-        scene_caravan(state)
-    else:
-        state.change_virtue("Temperance", 1)
+    # Moral cost for over-harvesting
+    if state.flags.get("overharvested") or random.random() < 0.3:
+        print(f"You find {resource}, but the land feels thinner.")
+        state.change_virtue("Temperance", -1)
         state.change_virtue("Compassion", -1)
-        print("\nYou keep your eyes on the northern road.")
-        pause()
-        scene_mountain_path(state)
+        if state.location == "Whispering Woods":
+            state.world["Whispering Woods"]["state"] = "thinning"
+            state.flags["overharvested"] = True
+    else:
+        print(f"You carefully gather {resource}.")
+        if resource == "Wood" and state.has_virtue("Humility", 6):
+            state.change_virtue("Temperance", 1)
 
-def scene_village(state: GameState):
+    state.add_item(resource, random.randint(1, 3))
+    pause()
+
+def build(state: GameState):
+    print("\nWhat do you wish to raise?")
+    options = [
+        "Simple shelter (3 Wood) — basic protection",
+        "Shared storehouse (5 Wood + 2 Stone) — helps the land and people",
+        "Fortified outpost (8 Stone + 3 Iron) — strong defense, closed to outsiders",
+        "Sanctuary garden (4 Wood + Sacred Seed) — restores the land (requires seed)"
+    ]
+    c = choice("Building choice:", options)
+
+    if c == 1 and state.has_item("Wood", 3):
+        state.inventory["Wood"] -= 3
+        print("\nA simple shelter stands. You can rest more safely.")
+        state.change_virtue("Temperance", 1)
+    elif c == 2 and state.has_item("Wood", 5) and state.has_item("Stone", 2):
+        state.inventory["Wood"] -= 5
+        state.inventory["Stone"] -= 2
+        print("\nThe storehouse is open to any who need it. Word spreads.")
+        state.change_virtue("Compassion", 2)
+        state.change_virtue("Humility", 1)
+        state.change_loyalty("Elara", 1)
+        state.flags["helped_village"] = True
+        if state.location in state.world:
+            state.world[state.location]["state"] = "recovering"
+    elif c == 3 and state.has_item("Stone", 8) and state.has_item("Iron", 3):
+        state.inventory["Stone"] -= 8
+        state.inventory["Iron"] -= 3
+        print("\nThick walls rise. Nothing enters without your leave.")
+        state.change_virtue("Courage", 1)
+        state.change_virtue("Justice", 1)
+        state.change_virtue("Compassion", -1)
+        state.change_virtue("Humility", -1)
+        state.flags["fortress_only"] = True
+        state.change_loyalty("Kael", 1)
+        state.change_loyalty("Elara", -1)
+    elif c == 4 and state.has_item("Wood", 4) and state.has_item("Sacred Seed"):
+        state.inventory["Wood"] -= 4
+        state.inventory["Sacred Seed"] -= 1
+        print("\nYou plant the seed and raise a quiet garden around it.")
+        state.change_virtue("Compassion", 2)
+        state.change_virtue("Humility", 2)
+        state.change_virtue("Temperance", 1)
+        state.flags["restored_grove"] = True
+        state.flags["built_sanctuary"] = True
+        state.world["Whispering Woods"]["state"] = "restored"
+        state.change_loyalty("Elara", 2)
+        state.change_loyalty("Silas", 1)
+    else:
+        print("\nYou lack the materials or the seed.")
+    pause()
+
+def talk_companions(state: GameState):
+    print("\nYour companions are nearby.")
+    options = list(state.companions.keys()) + ["Never mind"]
+    c = choice("Speak with:", options)
+    if c == len(options):
+        return
+
+    name = options[c-1]
+    loy = state.companions[name]
+
+    if name == "Elara":
+        if loy >= 7:
+            print("\nElara: \"The land remembers kindness. So do I.\"")
+            if not state.has_item("Sacred Seed") and state.flags.get("helped_village"):
+                print("She presses a small glowing seed into your hand.")
+                state.add_item("Sacred Seed")
+        elif loy <= 3:
+            print("\nElara looks away. \"I am not sure this road still leads where I hoped.\"")
+        else:
+            print("\nElara: \"We can still choose what kind of people we become.\"")
+    elif name == "Kael":
+        if state.has_virtue("Justice", 7):
+            print("\nKael: \"Good. The world needs people who will stand when it costs them.\"")
+            state.change_loyalty("Kael", 1)
+        else:
+            print("\nKael: \"Mercy is fine until the next village burns.\"")
+    elif name == "Silas":
+        if state.has_virtue("Wisdom", 6):
+            print("\nSilas: \"The old texts speak of a lamp that cannot be seized, only tended.\"")
+            state.change_virtue("Wisdom", 1)
+        else:
+            print("\nSilas is quiet, watching the horizon.")
+    pause()
+
+def travel(state: GameState):
+    places = [p for p in state.world if p != state.location]
+    c = choice("Travel to:", places + ["Stay here"])
+    if c == len(places) + 1:
+        return
+    state.location = places[c-1]
+    state.day += 1
+    print(f"\nYou travel to the {state.location}.")
+    # Random or triggered events
+    if state.location == "Burning Village" and not state.flags["helped_village"]:
+        event_village(state)
+    elif state.location == "High Pass":
+        event_hermit(state)
+    elif state.location == "Northern Citadel":
+        if state.total_virtue() >= 30 or state.day >= 8:
+            climax(state)
+        else:
+            print("\nThe gates are sealed by a cold light. You are not yet ready.")
+    pause()
+
+# ─────────────────────────────────────────────
+# KEY MORAL EVENTS (same systems)
+# ─────────────────────────────────────────────
+
+def event_village(state: GameState):
     clear()
     print("""
-Flames lick the thatched roofs. A child clutches a scorched doll.
-An old woman points toward the well: "They took the water. Left us the fire."
-
-Elara is already moving toward the wounded.
-Kael grips his sword. "We can still catch the raiders."
-Silas studies the smoke. "This was no random attack."
+The village still smolders. A child clutches a scorched doll.
+An old woman points to the well: "They took the water. Left us the fire."
 """)
     c = choice("What do you do?", [
-        "Help the wounded and put out the fires (Compassion)",
-        "Pursue the raiders immediately (Justice / Courage)",
-        "Question the survivors carefully before acting (Wisdom)"
+        "Help the wounded and share your Food (Compassion)",
+        "Hunt the raiders immediately (Justice / Courage)",
+        "Study the signs left behind (Wisdom)",
+        "Take what little remains and leave (Temptation)"
     ])
-
-    if c == 1:
+    if c == 1 and state.has_item("Food", 1):
+        state.inventory["Food"] -= 1
         state.change_virtue("Compassion", 2)
         state.change_loyalty("Elara", 2)
-        state.change_loyalty("Kael", -1)
-        print("\nYou and Elara work through the night. Lives are saved. The raiders escape.")
         state.flags["helped_village"] = True
+        state.world["Burning Village"]["state"] = "recovering"
+        print("\nYou and Elara work through the day. Lives are saved.")
     elif c == 2:
         state.change_virtue("Courage", 1)
         state.change_virtue("Justice", 1)
         state.change_loyalty("Kael", 2)
-        state.change_loyalty("Elara", -1)
-        print("\nYou ride hard. The raiders are caught—but the village burns hotter in your absence.")
-        state.flags["spared_bandit"] = False  # will be set later if mercy shown
-        scene_raiders(state)
-        return
-    else:
+        print("\nYou pursue. The raiders are caught—but the village suffers more in your absence.")
+        # mini raider choice
+        c2 = choice("Their young leader is at your mercy.", [
+            "End him.", "Spare and question him.", "Offer him another road."
+        ])
+        if c2 == 1:
+            state.change_virtue("Compassion", -2)
+            state.flags["spared_bandit"] = False
+        elif c2 == 2:
+            state.change_virtue("Wisdom", 1)
+            state.flags["spared_bandit"] = True
+        else:
+            state.change_virtue("Compassion", 2)
+            state.change_virtue("Humility", 1)
+            state.flags["spared_bandit"] = True
+            state.flags["showed_mercy_to_enemy"] = True
+    elif c == 3:
         state.change_virtue("Wisdom", 2)
         state.change_loyalty("Silas", 2)
-        print("\nYou learn the raiders were paid by someone in the north. A name is whispered: Malakar.")
+        print("\nYou learn the name Malakar. The attack was paid for from the north.")
         state.flags["helped_village"] = True
-
-    pause()
-    scene_mountain_path(state)
-
-def scene_raiders(state: GameState):
-    clear()
-    print("""
-You overtake the raiders in a narrow gorge. Their leader is young—
-scarred, angry, and clearly following orders he does not fully understand.
-""")
-    c = choice("He is at your mercy.", [
-        "Strike him down. Justice demands it.",
-        "Spare him and demand answers.",
-        "Offer him a chance to walk a different road."
-    ])
-
-    if c == 1:
-        state.change_virtue("Justice", 1)
-        state.change_virtue("Compassion", -2)
-        state.change_virtue("Temperance", -1)
-        print("\nSteel flashes. The gorge falls silent.")
-        state.flags["spared_bandit"] = False
-    elif c == 2:
-        state.change_virtue("Wisdom", 1)
-        state.change_virtue("Justice", 1)
-        print("\nHe talks. The name Malakar surfaces again. You bind him and leave him for the law.")
-        state.flags["spared_bandit"] = True
     else:
-        state.change_virtue("Compassion", 2)
-        state.change_virtue("Humility", 1)
-        state.change_virtue("Justice", -1)
-        print("\nHe stares at you as if seeing a ghost. Slowly, he drops his blade.")
-        state.flags["spared_bandit"] = True
-        state.flags["showed_mercy_to_enemy"] = True
-
-    pause()
-    scene_mountain_path(state)
-
-def scene_caravan(state: GameState):
-    clear()
-    print("""
-Merchants fight desperately against masked bandits. Gold spills across the road.
-One merchant sees you and shouts: "Help us and half is yours!"
-""")
-    c = choice("What do you do?", [
-        "Fight to protect the caravan (Courage / Justice)",
-        "Demand the gold first, then help (Temptation)",
-        "Try to negotiate a bloodless end (Wisdom / Temperance)"
-    ])
-
-    if c == 1:
-        state.change_virtue("Courage", 2)
-        state.change_virtue("Justice", 1)
-        state.change_loyalty("Kael", 1)
-        print("\nTogether you drive the bandits off. The merchants are grateful.")
-        state.inventory.append("Merchant's Token")
-    elif c == 2:
         state.change_virtue("Temperance", -2)
-        state.change_virtue("Humility", -1)
+        state.change_virtue("Compassion", -2)
+        state.add_item("Food", 2)
+        state.add_item("Stone", 1)
+        print("\nYou take what you can carry. The villagers watch in silence.")
         state.flags["took_gold"] = True
-        print("\nGold changes hands. The fighting continues—some of it now directed at you.")
-        state.change_loyalty("Elara", -1)
-        state.change_loyalty("Silas", -1)
-    else:
-        state.change_virtue("Wisdom", 1)
-        state.change_virtue("Temperance", 2)
-        print("\nWords prove stronger than steel this day. The bandits leave with empty hands.")
-        state.inventory.append("Quiet Victory")
-
     pause()
-    scene_mountain_path(state)
 
-def scene_mountain_path(state: GameState):
+def event_hermit(state: GameState):
     clear()
     print("""
-The northern road climbs into mist. At a high pass you find a lone hermit
-tending a small lamp that never seems to gutter.
-
-He looks at each of you in turn, then at you.
-"The road ahead divides those who seek light from those who merely fear the dark.
-What do you carry that cannot be taken from you?"
+At the High Pass a hermit tends a small lamp that never gutters.
+"What do you carry that cannot be taken from you?"
 """)
-    c = choice("How do you answer?", [
-        "My strength and my blade.",
-        "The bonds I share with these companions.",
+    c = choice("Your answer:", [
+        "My strength and my tools.",
+        "The bonds with those who walk with me.",
         "Nothing that belongs to me alone.",
         "I do not know yet."
     ])
-
     if c == 1:
         state.change_virtue("Humility", -1)
         state.change_virtue("Courage", 1)
     elif c == 2:
         state.change_virtue("Compassion", 1)
-        state.change_loyalty("Elara", 1)
-        state.change_loyalty("Kael", 1)
-        state.change_loyalty("Silas", 1)
+        for k in state.companions:
+            state.change_loyalty(k, 1)
     elif c == 3:
         state.change_virtue("Humility", 2)
         state.change_virtue("Wisdom", 1)
@@ -300,218 +338,155 @@ What do you carry that cannot be taken from you?"
         state.change_virtue("Humility", 1)
         state.change_virtue("Wisdom", 1)
 
-    print("\nThe hermit nods, as if the answer itself was less important than the honesty of it.")
-    print("He presses a small clay lamp into your hands. 'Keep it trimmed.'")
-    state.inventory.append("Clay Lamp")
-    pause()
-
-    state.story_stage = "temptation"
-    scene_temptation(state)
-
-def scene_temptation(state: GameState):
-    clear()
-    print("""
-Night falls in the high country. A figure steps from the mist—neither friend nor foe.
-His voice is calm, almost kind.
-
-"You have walked far. You have made hard choices. I can make the rest easier.
-Power enough to end the darkness in a single stroke. No more villages burning.
-No more hard roads. Only the will to take what is offered."
-
-A black key rests in his open palm.
-""")
-    c = choice("What do you do?", [
-        "Refuse. Some prices are too high.",
-        "Ask what the key truly costs.",
-        "Take the key. The ends justify the means."
-    ])
-
-    if c == 1:
-        state.change_virtue("Temperance", 2)
-        state.change_virtue("Humility", 1)
-        state.change_virtue("Courage", 1)
-        print("\nThe figure smiles—almost sadly—and vanishes. The mist thins.")
-        state.flags["chose_power"] = False
-    elif c == 2:
-        state.change_virtue("Wisdom", 2)
-        print("\nHe answers: 'Only the part of you that still believes the light must be earned,
-not seized.' You step back. The key dissolves.")
-        state.flags["chose_power"] = False
+    if not state.has_item("Sacred Seed") and state.has_virtue("Humility", 6):
+        print("\nHe presses a clay lamp and a single seed into your hands.")
+        state.add_item("Sacred Seed")
+        state.add_item("Clay Lamp")
     else:
-        state.change_virtue("Temperance", -3)
-        state.change_virtue("Humility", -2)
-        state.change_virtue("Courage", 1)
-        state.flags["chose_power"] = True
-        state.inventory.append("Black Key")
-        print("\nThe key is cold. For a moment the world feels lighter—and emptier.")
-
+        print("\nHe nods and returns to his lamp.")
     pause()
-    state.story_stage = "climax"
-    scene_climax(state)
 
-def scene_climax(state: GameState):
+def climax(state: GameState):
     clear()
     print("""
-You stand before the gates of the northern citadel.
-Malakar waits—no longer a shadow, but a man who once walked the same road you walk.
-
-"I tired of waiting for the light," he says. "I decided to become it."
-
-Behind him the citadel burns with a cold fire. Your companions look to you.
+You stand before the Northern Citadel.
+Malakar waits. "I tired of waiting for the light. I decided to become it."
 """)
-    # Available options depend on virtues and earlier choices
     options = []
     results = []
 
-    # Always available
-    options.append("Confront him with the truth of what he has become (Justice)")
+    options.append("Confront him with the truth (Justice)")
     results.append("confront")
 
     if state.has_virtue("Compassion", 7) or state.flags["showed_mercy_to_enemy"]:
-        options.append("Offer him a path back—mercy even now (Compassion)")
+        options.append("Offer him a path back (Compassion)")
         results.append("mercy")
 
-    if state.has_virtue("Wisdom", 7) and "Clay Lamp" in state.inventory:
-        options.append("Hold up the clay lamp and speak of the hermit's words (Wisdom)")
+    if state.has_virtue("Wisdom", 7) and state.has_item("Clay Lamp"):
+        options.append("Hold up the clay lamp (Wisdom)")
         results.append("lamp")
 
-    if state.flags["chose_power"] and "Black Key" in state.inventory:
-        options.append("Use the Black Key to end him instantly (Power)")
+    if state.flags.get("chose_power"):
+        options.append("Use the power you claimed (Power)")
         results.append("key")
 
     if state.has_virtue("Humility", 6) and state.total_virtue() >= 35:
-        options.append("Kneel and confess your own failures before judging his (Humility)")
+        options.append("Speak first of your own failures (Humility)")
         results.append("humble")
 
-    c = choice("The final choice is yours.", options)
-    decision = results[c - 1]
+    if state.flags.get("restored_grove") or state.flags.get("built_sanctuary"):
+        options.append("Point to the restored land behind you (Stewardship)")
+        results.append("steward")
 
-    # Resolve
+    c = choice("Final choice:", options)
+    decision = results[c-1]
+
     if decision == "confront":
         state.change_virtue("Justice", 2)
-        state.change_virtue("Courage", 1)
-        print("\nYour words cut deeper than any blade. Malakar falters.")
-        if state.companions["Kael"] >= 7:
-            print("Kael stands with you. The citadel begins to crack.")
         state.ending = "justice"
     elif decision == "mercy":
         state.change_virtue("Compassion", 2)
-        state.change_virtue("Humility", 1)
-        print("\nHe laughs—then the laugh breaks. Something old and human surfaces in his eyes.")
-        state.flags["showed_mercy_to_enemy"] = True
         state.ending = "mercy"
     elif decision == "lamp":
         state.change_virtue("Wisdom", 2)
-        print("\nThe small flame does not fight the cold fire. It simply remains.
-Malakar stares at it as if remembering a name he once knew.")
         state.ending = "wisdom"
     elif decision == "key":
         state.change_virtue("Temperance", -2)
-        state.change_virtue("Justice", 1)
-        print("\nThe key turns. Malakar is unmade in an instant.
-The cold fire dies—yet the silence that follows is not peace.")
         state.ending = "power"
     elif decision == "humble":
         state.change_virtue("Humility", 3)
-        state.change_virtue("Compassion", 1)
-        print("\nYou speak of your own failures first.
-Malakar has no answer for that. The citadel's light shifts.")
         state.ending = "humility"
+    elif decision == "steward":
+        state.change_virtue("Compassion", 1)
+        state.change_virtue("Temperance", 2)
+        state.ending = "steward"
 
-    pause()
     state.story_stage = "ending"
     ending(state)
 
 def ending(state: GameState):
     clear()
-    print("═" * 60)
-    print("  THE ROAD CONTINUES")
-    print("═" * 60)
+    print("═" * 64)
+    print("  THE WORLD YOU SHAPED")
+    print("═" * 64)
 
-    # Determine narrative outcome based on ending type + virtues + flags
     if state.ending == "power":
-        print("""
-You ended the immediate threat. The north is quiet.
-Yet the people look at you with a new kind of fear.
-The clay lamp in your pack has gone dark.
-""")
-        if state.virtues["Temperance"] < 4:
-            print("Something in you has grown used to taking what it wants.")
+        print("\nYou ended the immediate threat. The north is quiet.\nThe people look at you differently now.")
     elif state.ending == "mercy":
-        print("""
-Malakar lives—broken, but alive. Some call you weak.
-Others begin to speak of a different kind of strength.
-Elara stays by your side. The road ahead is longer, but less lonely.
-""")
+        print("\nMalakar lives—broken, but alive. Some call it weakness.\nOthers begin planting again.")
     elif state.ending == "wisdom":
-        print("""
-The citadel does not fall in fire. It is reclaimed, slowly.
-Silas records what happened. Future travelers will read of a lamp
-that refused to become a sword.
-""")
+        print("\nThe citadel is reclaimed slowly. Future travelers will read of a lamp\nthat refused to become a sword.")
     elif state.ending == "humility":
-        print("""
-You did not defeat Malakar so much as refuse to become him.
-The people do not raise statues. They raise ordinary lamps instead.
-""")
-    else:  # justice
-        print("""
-Justice was done. The cost was real.
-Kael understands the weight you both now carry.
-The road is cleaner—and quieter.
-""")
+        print("\nYou did not defeat him so much as refuse to become him.\nOrdinary lamps appear in windows across the land.")
+    elif state.ending == "steward":
+        print("\nThe land itself answers. Where you restored, life returns.\nThe citadel's cold fire finally gutters out.")
+    else:
+        print("\nJustice was done. The cost remains.")
 
-    # Companion epilogues
-    print("\nYour companions:")
+    print("\nCompanions:")
     for name, loy in state.companions.items():
         if loy >= 8:
-            print(f"  {name} remains fiercely loyal. The bond was tested and held.")
+            print(f"  {name} remains with you.")
         elif loy >= 5:
-            print(f"  {name} walks with you still, though not without questions.")
+            print(f"  {name} continues, with questions.")
         else:
-            print(f"  {name} parts ways when the road allows. Some distances cannot be closed.")
+            print(f"  {name} parts ways.")
 
-    # Final virtue reflection (subtle, not preachy)
-    print("\n" + "─" * 60)
-    print("What you carried with you:")
+    print("\nFinal virtues:")
     for v in VIRTUES:
         val = state.virtues[v]
-        if val >= 8:
-            print(f"  {v} — deeply rooted")
-        elif val >= 5:
-            print(f"  {v} — present, still growing")
-        else:
-            print(f"  {v} — tested, and found wanting")
+        status = "deeply rooted" if val >= 8 else "present" if val >= 5 else "tested and found wanting"
+        print(f"  {v}: {status}")
 
-    print("\n" + "─" * 60)
-    print("""
-The story ends here—but the road does not.
-Every choice you made left a mark, not only on the world,
-but on the one who walked it.
+    print("\nWorld state:")
+    for place, data in state.world.items():
+        print(f"  {place}: {data['state']}")
 
-What you become next is still unwritten.
-""")
-    print("═" * 60)
-    show_status(state)
-    print("\nThank you for walking the narrow road.\n")
+    print("\n" + "═" * 64)
+    print("The story ends here—but the road does not.")
+    print("═" * 64 + "\n")
 
 # ─────────────────────────────────────────────
-# MAIN
+# MAIN LOOP
 # ─────────────────────────────────────────────
 
 def main():
     print("""
 ╔══════════════════════════════════════════════════════════╗
-║                    THE NARROW ROAD                       ║
-║         A narrative fantasy of choice and consequence    ║
+║              THE NARROW ROAD (Sandbox Edition)           ║
+║       Explore. Build. Make Choices. Shape the World.     ║
 ╚══════════════════════════════════════════════════════════╝
 """)
     state = GameState()
+    state.player_name = input("What name do you carry on this road? ").strip() or "Traveler"
+    print(f"\nVery well, {state.player_name}. The road opens.\n")
+    pause()
+
+    while state.story_stage == "explore":
+        clear()
+        print(f"Day {state.day} — {state.location}")
+        print("What do you do?")
+        c = choice("Choose:", [
+            "Gather resources",
+            "Build something",
+            "Talk with companions",
+            "Travel elsewhere",
+            "Check your status"
+        ])
+        if c == 1:
+            gather(state)
+        elif c == 2:
+            build(state)
+        elif c == 3:
+            talk_companions(state)
+        elif c == 4:
+            travel(state)
+        elif c == 5:
+            show_status(state)
+
+if __name__ == "__main__":
     try:
-        prologue(state)
+        main()
     except KeyboardInterrupt:
         print("\n\nThe road can wait. Farewell.")
         sys.exit(0)
-
-if __name__ == "__main__":
-    main()
