@@ -9,8 +9,7 @@ const gameState = {
   combat: {
     playerHealth: 100,
     enemyHealth: 100,
-    enemy: null,
-    log: []
+    enemy: null
   }
 };
 
@@ -21,7 +20,6 @@ const scenes = {
     background: 'linear-gradient(to bottom, #1a1a2e 0%, #2d1b4e 100%)',
     next: 'cain_offering'
   },
-
   cain_offering: {
     text: "You are Cain. Your offering is rejected while Abel's is accepted. Anger burns in your chest like fire.",
     character: { name: 'Cain', emoji: '🌾' },
@@ -32,56 +30,48 @@ const scenes = {
       { text: 'Suppress the feeling', next: 'cain_suppress', effect: { humility: -5 } }
     ]
   },
-
   cain_combat: {
     type: 'combat',
     enemy: { name: 'Anger', emoji: '👿', health: 100, damage: 20 },
     win: 'cain_victory',
     lose: 'cain_defeat'
   },
-
   cain_victory: {
     text: 'Through prayer and faith, you mastered your anger. The spirit of rage dissipates like morning fog.',
     character: { name: 'Cain', emoji: '🙏' },
     background: 'linear-gradient(to bottom, #2d3b1b 0%, #1a2d1b 100%)',
-    next: 'cain_redemption'
+    next: 'joseph_intro'
   },
-
   cain_redemption: {
     text: '🎓 REDEMPTION: You chose a better path. Abel lives. The cycle is broken. You learned that sin can be mastered before it masters you.',
     character: { name: 'Cain', emoji: '✨' },
     background: 'linear-gradient(to bottom, #d4af37 0%, #c9a227 100%)',
-    choices: [{ text: 'Play Again', next: 'intro' }]
+    next: 'joseph_intro'
   },
-
   cain_defeat: {
     text: 'The anger consumed you. You raise your hand against your brother... and the first murder stains the earth.',
     character: { name: 'God', emoji: '⚡' },
     background: 'linear-gradient(to bottom, #1a0000 0%, #000 100%)',
     next: 'cain_lesson'
   },
-
   cain_lesson: {
-    text: '🎓 LESSON: Unmastered sin leads to destruction. But even in judgment, God showed mercy-marking Cain for protection.',
+    text: '🎓 LESSON: Unmastered sin leads to destruction. But even in judgment, God showed mercy, marking Cain for protection.',
     character: { name: 'God', emoji: '🛡️' },
     background: 'linear-gradient(to bottom, #4a3b5c 0%, #2d1b4e 100%)',
-    choices: [{ text: 'Try Again', next: 'intro' }]
+    next: 'joseph_intro'
   },
-
   cain_wisdom: {
-    text: "God speaks: 'If you do what is right, will you not be accepted? Sin crouches at your door - you must master it.'",
+    text: "God speaks: 'If you do what is right, will you not be accepted? Sin crouches at your door — you must master it.'",
     character: { name: 'God', emoji: '☁️' },
     background: 'linear-gradient(to bottom, #1a2d3b 0%, #2d3b1b 100%)',
     next: 'cain_redemption'
   },
-
   cain_suppress: {
     text: 'You bury your anger deep. It festers. Grows. Until one day in the field...',
     character: { name: 'Cain', emoji: '😠' },
     background: 'linear-gradient(to bottom, #3d1b1b 0%, #1a0000 100%)',
     next: 'cain_combat'
   },
-
   joseph_intro: {
     text: 'Years later, Joseph is sold into slavery. He stands in a foreign land without comfort, with only God in his heart.',
     character: { name: 'Joseph', emoji: '🧵' },
@@ -92,28 +82,24 @@ const scenes = {
       { text: 'Hide your hurt', next: 'joseph_endurance', effect: { humility: +4, wisdom: +3 } }
     ]
   },
-
   joseph_justice: {
     text: 'Joseph keeps integrity when Potiphar’s wife tempts him. His faith remains steady, even when false accusation follows.',
     character: { name: 'Joseph', emoji: '🛡️' },
     background: 'linear-gradient(to bottom, #1f3b2b 0%, #163328 100%)',
     next: 'david_intro'
   },
-
   joseph_bitter: {
     text: 'Bitterness grows in the prison cell. You carry resentment instead of trust, and the wound deepens.',
     character: { name: 'Joseph', emoji: '😔' },
     background: 'linear-gradient(to bottom, #2f1a23 0%, #190b12 100%)',
     next: 'david_intro'
   },
-
   joseph_endurance: {
     text: 'You learn to wait quietly. Joseph does not boast; he serves, and in time God lifts him.',
     character: { name: 'Joseph', emoji: '🌱' },
     background: 'linear-gradient(to bottom, #1f2e38 0%, #233c46 100%)',
     next: 'david_intro'
   },
-
   david_intro: {
     text: 'David stands before Goliath. The giant dares the armies of Israel, but the shepherd has a different kind of courage.',
     character: { name: 'David', emoji: '🏹' },
@@ -124,28 +110,24 @@ const scenes = {
       { text: 'Fight in your own strength', next: 'david_combat', effect: { wisdom: -4 } }
     ]
   },
-
   david_combat: {
     type: 'combat',
     enemy: { name: 'Goliath', emoji: '🪖', health: 110, damage: 24 },
     win: 'david_trust',
     lose: 'david_fear'
   },
-
   david_trust: {
     text: 'David picks up five stones, but the real strength was not in the sling — it was in holy trust.',
     character: { name: 'David', emoji: '✨' },
     background: 'linear-gradient(to bottom, #173d2a 0%, #1b5e43 100%)',
     next: 'daniel_intro'
   },
-
   david_fear: {
     text: 'Fear grows larger than faith. The giant seems unstoppable when your eyes are fixed on him rather than God.',
     character: { name: 'David', emoji: '😟' },
     background: 'linear-gradient(to bottom, #2d1a1a 0%, #1e0d0d 100%)',
     next: 'daniel_intro'
   },
-
   daniel_intro: {
     text: 'Daniel is cast into a kingdom of power and pressure. The lion’s den waits for those who do not bow away from God.',
     character: { name: 'Daniel', emoji: '🦁' },
@@ -156,28 +138,24 @@ const scenes = {
       { text: 'Quietly serve', next: 'daniel_service', effect: { humility: +8, wisdom: +4 } }
     ]
   },
-
   daniel_prayer: {
     text: 'Daniel kneels and prays. The lions are not more powerful than the God who protects the faithful.',
     character: { name: 'Daniel', emoji: '🙏' },
     background: 'linear-gradient(to bottom, #1d2d3d 0%, #204862 100%)',
     next: 'final_reflection'
   },
-
   daniel_compromise: {
     text: 'You choose comfort over obedience. The path feels safe at first, but it twists the heart away from truth.',
     character: { name: 'Daniel', emoji: '⚠️' },
     background: 'linear-gradient(to bottom, #2a1e1a 0%, #17110f 100%)',
     next: 'final_reflection'
   },
-
   daniel_service: {
     text: 'Daniel keeps humility and service at the center. That posture leads to wisdom and favor.',
     character: { name: 'Daniel', emoji: '🌟' },
     background: 'linear-gradient(to bottom, #2f3557 0%, #1b2948 100%)',
     next: 'final_reflection'
   },
-
   final_reflection: {
     text: 'The path of Scripture is not a single moment, but a lifetime of choosing faith over fear, wisdom over pride, and humility over self.',
     character: { name: 'Narrator', emoji: '📖' },
@@ -186,7 +164,10 @@ const scenes = {
   }
 };
 
-const storyOrder = ['intro', 'cain_offering', 'cain_wisdom', 'cain_suppress', 'cain_combat', 'cain_victory', 'cain_redemption', 'joseph_intro', 'joseph_justice', 'joseph_bitter', 'joseph_endurance', 'david_intro', 'david_trust', 'david_fear', 'david_combat', 'daniel_intro', 'daniel_prayer', 'daniel_compromise', 'daniel_service', 'final_reflection'];
+const backgroundMusic = [220, 277, 329.63, 392, 329.63, 277, 220];
+let musicEnabled = true;
+let audioContext = null;
+let musicLoopTimer = null;
 
 const titleEl = document.getElementById('title');
 const menuScreen = document.getElementById('menu-screen');
@@ -198,10 +179,6 @@ const characterEl = document.getElementById('character');
 const characterEmoji = document.getElementById('character-emoji');
 const characterNameEl = document.getElementById('character-name');
 const combatScreen = document.getElementById('combat-screen');
-const combatLog = document.getElementById('combat-log');
-
-let audioContext = null;
-let musicEnabled = true;
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -213,17 +190,18 @@ function updateStats() {
   document.getElementById('humility-stat').textContent = gameState.humility;
 }
 
-function safeSaveGame() {
+function saveGame() {
   try {
-    const { combat, ...rest } = gameState;
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...rest, currentScene: gameState.currentScene }));
+    const payload = {
+      faith: gameState.faith,
+      wisdom: gameState.wisdom,
+      humility: gameState.humility,
+      currentScene: gameState.currentScene
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
   } catch (error) {
     console.warn('Could not save game', error);
   }
-}
-
-function saveGame() {
-  safeSaveGame();
 }
 
 function startGame() {
@@ -252,7 +230,7 @@ function loadGame() {
 
     transitionTo(() => {
       menuScreen.classList.add('hidden');
-      showScene(gameState.currentScene || 'intro');
+      showScene(gameState.currentScene);
       ensureAudio();
       playMusicLoop();
     });
@@ -268,9 +246,7 @@ function transitionTo(callback) {
 
   setTimeout(() => {
     callback();
-    setTimeout(() => {
-      overlay.classList.remove('active', 'wipe');
-    }, 100);
+    setTimeout(() => overlay.classList.remove('active', 'wipe'), 100);
   }, 500);
 }
 
@@ -327,22 +303,20 @@ function playTone(frequency, duration = 0.2, type = 'sine', volume = 0.025) {
   oscillator.stop(audioContext.currentTime + duration);
 }
 
-let musicLoopTimer = null;
-
 function playMusicLoop() {
   if (!musicEnabled || !audioContext) return;
 
-  const notes = [220, 277, 329.63, 392, 329.63, 277, 220];
-
-  function step(index) {
-    const note = notes[index % notes.length];
-    playTone(note, 0.25, 'sine', 0.018);
-    playTone(note / 2, 0.2, 'triangle', 0.012);
-    musicLoopTimer = setTimeout(() => step(index + 1), 420);
+  let step = 0;
+  function tick() {
+    const note = backgroundMusic[step % backgroundMusic.length];
+    playTone(note, 0.24, 'sine', 0.018);
+    playTone(note / 2, 0.18, 'triangle', 0.012);
+    step += 1;
+    musicLoopTimer = setTimeout(tick, 420);
   }
 
   clearTimeout(musicLoopTimer);
-  step(0);
+  tick();
 }
 
 function toggleMusic() {
@@ -366,29 +340,30 @@ function applyChoiceEffects(effect) {
   if (!effect) return;
 
   Object.entries(effect).forEach(([stat, value]) => {
-    if (!gameState[stat] && gameState[stat] !== 0) return;
-
+    if (!(stat in gameState)) return;
     gameState[stat] = clamp(gameState[stat] + value, 0, 100);
+
     const statEl = document.getElementById(`${stat}-stat`);
-    const stateBox = document.getElementById(`stat-${stat}`);
+    const statBox = document.getElementById(`stat-${stat}`);
     if (statEl) statEl.textContent = gameState[stat];
-    if (stateBox) {
-      stateBox.classList.add('changed');
-      setTimeout(() => stateBox.classList.remove('changed'), 500);
+    if (statBox) {
+      statBox.classList.add('changed');
+      setTimeout(() => statBox.classList.remove('changed'), 500);
     }
   });
 }
 
 function showScene(sceneId) {
-  gameState.currentScene = sceneId;
-  const scene = scenes[sceneId];
-
-  if (!scene) {
-    console.error(`Scene not found: ${sceneId}`);
+  if (!scenes[sceneId]) {
+    console.error(`Missing scene: ${sceneId}`);
     return;
   }
 
+  gameState.currentScene = sceneId;
+  const scene = scenes[sceneId];
+
   sceneEl.classList.add('transitioning');
+
   setTimeout(() => {
     sceneEl.style.background = scene.background || 'linear-gradient(to bottom, #1a1a2e 0%, #2d1b4e 100%)';
     dialogueText.textContent = scene.text;
@@ -410,26 +385,22 @@ function showScene(sceneId) {
       setTimeout(() => characterNameEl.classList.add('hidden'), 500);
     }
 
-    const choiceButtons = [];
     choicesEl.innerHTML = '';
+    choicesEl.classList.add('hidden');
+    continueBtn.classList.add('hidden');
 
     if (scene.type === 'combat') {
       continueBtn.classList.remove('hidden');
-      if (continueBtn) {
-        continueBtn.textContent = 'Fight the enemy →';
-        continueBtn.onclick = () => startCombat(scene.enemy);
-      }
-      choicesEl.classList.add('hidden');
+      continueBtn.textContent = 'Fight the enemy →';
+      continueBtn.onclick = () => startCombat(scene.enemy);
     } else if (scene.choices) {
-      continueBtn.classList.add('hidden');
       choicesEl.classList.remove('hidden');
-
       scene.choices.forEach((choice, index) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'choice-btn';
-        btn.innerHTML = `<span>${choice.text}</span>`;
-        btn.onclick = () => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'choice-btn';
+        button.innerHTML = `<span>${choice.text}</span>`;
+        button.onclick = () => {
           applyChoiceEffects(choice.effect);
           if ((choice.text || '').toLowerCase().includes('anger') || (choice.text || '').toLowerCase().includes('sin')) {
             flashLightning();
@@ -437,13 +408,11 @@ function showScene(sceneId) {
           createParticles(window.innerWidth / 2, window.innerHeight / 2, 5);
           transitionTo(() => showScene(choice.next));
         };
-        choicesEl.appendChild(btn);
-        choiceButtons.push(btn);
-        setTimeout(() => btn.classList.add('visible'), index * 90);
+        choicesEl.appendChild(button);
+        setTimeout(() => button.classList.add('visible'), index * 90);
       });
     } else if (scene.next) {
       continueBtn.classList.remove('hidden');
-      choicesEl.classList.add('hidden');
       continueBtn.textContent = 'Click to continue →';
       continueBtn.onclick = () => {
         createParticles(window.innerWidth / 2, window.innerHeight / 2, 3);
@@ -466,7 +435,6 @@ function startCombat(enemyData) {
   gameState.combat.enemy = enemyData;
   gameState.combat.playerHealth = 100;
   gameState.combat.enemyHealth = enemyData.health || 100;
-  gameState.combat.log = [];
 
   document.getElementById('enemy-name').textContent = enemyData.name;
   document.getElementById('enemy-avatar').textContent = enemyData.emoji;
@@ -483,10 +451,8 @@ function startCombat(enemyData) {
 }
 
 function updateCombatUI() {
-  const playerHealthEl = document.getElementById('player-health');
-  const enemyHealthEl = document.getElementById('enemy-health');
-  playerHealthEl.style.width = `${clamp(gameState.combat.playerHealth, 0, 100)}%`;
-  enemyHealthEl.style.width = `${clamp(gameState.combat.enemyHealth, 0, 100)}%`;
+  document.getElementById('player-health').style.width = `${clamp(gameState.combat.playerHealth, 0, 100)}%`;
+  document.getElementById('enemy-health').style.width = `${clamp(gameState.combat.enemyHealth, 0, 100)}%`;
 }
 
 function showDamageNumber(x, y, damage, type) {
@@ -505,7 +471,6 @@ function combatAction(action) {
   const player = document.getElementById('player-combatant');
   const enemy = document.getElementById('enemy-combatant');
   const currentEnemy = gameState.combat.enemy;
-
   let playerDamage = 0;
   let enemyDamage = currentEnemy.damage || 18;
   let message = 'You strike with effort.';
@@ -555,7 +520,7 @@ function combatAction(action) {
   updateCombatUI();
 
   const logEl = document.getElementById('combat-log');
-  logEl.innerHTML = `<div style="color: #d4af37; margin-bottom: 5px;">${message}</div>${logEl.innerHTML}`;
+  logEl.innerHTML = `<div style="color: #d4af37; margin-bottom: 6px;">${message}</div>${logEl.innerHTML}`;
 
   if (gameState.combat.enemyHealth <= 0) {
     setTimeout(() => endCombat(true), 500);
@@ -602,6 +567,19 @@ window.addEventListener('keydown', (event) => {
       active.click();
     }
   }
+});
+
+window.addEventListener('mousemove', (event) => {
+  const layers = document.querySelectorAll('.parallax-layer');
+  const x = (event.clientX / window.innerWidth - 0.5) * 2;
+  const y = (event.clientY / window.innerHeight - 0.5) * 2;
+
+  layers.forEach((layer) => {
+    const speed = Number(layer.dataset.speed) || 0.1;
+    const xOffset = x * speed * 30;
+    const yOffset = y * speed * 30;
+    layer.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+  });
 });
 
 window.addEventListener('load', () => {
