@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Paths of Scripture — a cinematic, choice-based interactive Bible story game about faith, wisdom, and humility."
+    />
+    <title>Paths of Scripture</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="page-transition" aria-hidden="true"></div>
+
+    <div id="game-container" role="application" aria-label="Paths of Scripture interactive story game">
+      <div class="parallax-container" aria-hidden="true">
+        <div class="parallax-layer parallax-stars" data-speed="0.12"></div>
+        <div class="parallax-layer parallax-clouds" data-speed="0.25"></div>
+        <div class="parallax-layer parallax-mountains" data-speed="0.5"></div>
+        <div class="lightning" id="lightning"></div>
+      </div>
+
+      <div id="audio-controls" aria-live="polite">
+        <button class="menu-btn secondary" id="music-toggle" type="button" aria-label="Toggle background music">
+          🎵
+        </button>
+      </div>
+
+      <div id="combat-screen" class="hidden" aria-live="polite">
+        <div class="combat-arena">
+          <div class="combatant player" id="player-combatant">
+            <div class="health-bar"><div class="health-fill" id="player-health" style="width: 100%"></div></div>
+            <div class="combatant-avatar" aria-hidden="true">🛡️</div>
+            <div class="combatant-name">You</div>
+          </div>
+
+          <div class="versus">VS</div>
+
+          <div class="combatant enemy" id="enemy-combatant">
+            <div class="health-bar"><div class="health-fill enemy" id="enemy-health" style="width: 100%"></div></div>
+            <div class="combatant-avatar" id="enemy-avatar" aria-hidden="true">👹</div>
+            <div class="combatant-name enemy" id="enemy-name">Sin</div>
+          </div>
+        </div>
+
+        <div id="combat-actions" class="combat-actions" aria-label="Combat actions">
+          <button class="menu-btn action-btn" type="button" onclick="combatAction('prayer')">🙏 Prayer</button>
+          <button class="menu-btn action-btn" type="button" onclick="combatAction('scripture')">📖 Scripture</button>
+          <button class="menu-btn action-btn" type="button" onclick="combatAction('faith')">⭐ Faith</button>
+          <button class="menu-btn secondary action-btn" type="button" onclick="combatAction('heal')">💚 Heal</button>
+        </div>
+
+        <div id="combat-log" class="combat-log" aria-live="polite"></div>
+      </div>
+
+      <header id="header" aria-label="Game stats and title">
+        <div id="title">🕊️ Paths of Scripture</div>
+        <div id="stats" aria-label="Character stats">
+          <div class="stat" id="stat-faith">
+            <span class="stat-label">Faith:</span>
+            <span class="stat-value" id="faith-stat">50</span>
+          </div>
+          <div class="stat" id="stat-wisdom">
+            <span class="stat-label">Wisdom:</span>
+            <span class="stat-value" id="wisdom-stat">50</span>
+          </div>
+          <div class="stat" id="stat-humility">
+            <span class="stat-label">Humility:</span>
+            <span class="stat-value" id="humility-stat">50</span>
+          </div>
+        </div>
+      </header>
+
+      <main id="scene" aria-live="polite">
+        <div id="scene-overlay" aria-hidden="true"></div>
+
+        <div id="character-area" aria-label="Current character">
+          <div id="character" class="character" aria-live="polite">
+            <span id="character-emoji" aria-hidden="true">👤</span>
+          </div>
+          <div class="character-name hidden" id="character-name" role="status">Narrator</div>
+        </div>
+
+        <div id="dialogue-box">
+          <div id="dialogue-text">Welcome to Paths of Scripture...</div>
+          <button id="continue-btn" class="continue-btn" type="button" aria-label="Continue story">Click to continue →</button>
+          <div id="choices" class="choices hidden" aria-live="polite"></div>
+        </div>
+      </main>
+
+      <div id="menu-screen" aria-label="Main menu">
+        <h1>🕊️ Paths of Scripture</h1>
+        <p class="subtitle">Walk the ancient paths. Learn from their mistakes.</p>
+        <button class="menu-btn" type="button" onclick="startGame()">Begin Journey</button>
+        <button class="menu-btn secondary" type="button" onclick="loadGame()">Continue</button>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
